@@ -67,11 +67,11 @@ int get_opt(int argc, char* argv[])
 }
 
 
-/**Function:    free_get_opt
+/**Function:    get_opt_free
    Description: This function frees the resources allocated by get_opt
    Returns:     Nothing
  */
-void free_get_opt()
+void get_opt_free()
 {
    free(next);
 }

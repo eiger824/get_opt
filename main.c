@@ -11,6 +11,6 @@ int main(int argc, char* argv[])
 		//todo
 		printf("Doing stuff\n");
 	}
-        free_get_opt();
+        get_opt_free();
 	return 0;
 }
