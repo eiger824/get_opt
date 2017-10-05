@@ -8,6 +8,9 @@
 /* Pointer to the next argument */
 char* next = NULL;
 
+/* Array of subsequent arguments used with flags */
+char getoptarg[500];
+
 /* Pointer to the flags to read from */
 char global_flags[500];
 
@@ -16,6 +19,18 @@ int format = -1;
 
 /* Counter with the current argument number */
 int argnr = 1;
+
+/* Holds the value of the currently being processed flag */
+char current_flag = '\0';
+
+/* Flag that determines if the i-th argument has been totally read */
+int arg_processed = 0;
+
+unsigned current_index = 1;
+
+int get_opt_valid_flag(char c);
+void get_opt_free();
+int get_opt_parse_argv(char *arg);
 
 /**Function:     get_opt - A new CLI argument parser!
    Description:  Given the input arguments parsed from the command line when
@@ -45,11 +60,20 @@ int get_opt(int argc, char* argv[])
    {
       if (argnr < argc)
       {
-         next = argv[argnr];
-         printf("Current arg. number: %d, value is %s: \n", argnr, next);
-         ++argnr;
+         next = (char*) malloc(sizeof(char) * (strlen(argv[argnr]) + 1));
+         memcpy(next, argv[argnr], strlen(argv[argnr]));
+         next[strlen(argv[argnr])] = '\0';
+
+#ifdef GET_OPT_DEBUG_
+         printf("Current arg. number: %d, value is %s (current flag: %c)\n", argnr, next, current_flag);
+#endif
+         
+         int c = get_opt_parse_argv(next);
+         
+         if (arg_processed)
+            ++argnr;
          //TODO return real value!!
-         return 0;
+         return c;
       }
       else
       {
@@ -102,18 +126,151 @@ void get_opt_set_flags(const char* flags)
 {
    if (strstr(flags, ";") != NULL)
    {
-      printf("Long options\n");
       format = 1;
    }
    else
    {
-      printf("Short options\n");
       format = 0;
    }
    memcpy(global_flags, flags, strlen(flags)+1);
    global_flags[strlen(flags)+1] = '\0';
 
-   printf("Global flags is: %s (format is %d)\n", global_flags, format);
+#ifdef GET_OPT_DEBUG_
+   printf("Global flags is: '%s' (%s format)\n",
+          global_flags,
+          (format)?"long":"short");
+#endif
+}
+
+int get_opt_parse_argv(char *arg)
+{
+   if (strlen(arg) < 2)
+   {
+      //just a single character - invalid
+      return -1;
+   }
+   else //argv_i is valid
+   {
+      if (arg[0] == '-')
+      {
+         unsigned i;
+         for (i=current_index; i<strlen(arg); ++i)
+         {
+            int c;
+            switch ((c= get_opt_valid_flag(arg[i])))
+            {
+            case 0:
+#ifdef GET_OPT_DEBUG_
+               printf("Valid, non-argument-returning flag found: %c\n",
+                      arg[i]);
+#endif
+               if (i == strlen(arg)-1)
+               {
+                  current_index = 1;
+                  arg_processed = 1;
+               }
+               else
+               {
+                  ++current_index;
+               }
+               return arg[i];
+            case 1:
+#ifdef GET_OPT_DEBUG_
+               printf("Valid, at-least-one-argument-returning flag found: %c\n",
+                      arg[i]);
+#endif 
+               if (i == strlen(arg)-1)
+               {
+                  current_index = 1;
+               }
+               else
+               {
+                  ++current_index;
+                  unsigned j;
+                  for (j=current_index; j<strlen(arg); ++j)
+                  {
+                     getoptarg[j] = arg[j];
+                  }
+                  getoptarg[j-current_index+1] = '\0';
+               }
+               arg_processed = 1;
+               return arg[i];
+            case 2:
+#ifdef GET_OPT_DEBUG_
+               printf("Valid, optional-argument-returning flag found: %c\n",
+                      arg[i]);
+#endif 
+               if (i == strlen(arg)-1)
+               {
+                  current_index = 1;
+               }
+               else
+               {
+                  ++current_index;
+                  printf("Current index is %d\n", current_index);
+                  unsigned j;
+                  for (j=current_index; j<strlen(arg); ++j)
+                  {
+                     getoptarg[j-current_index] = arg[j];
+                     printf("j: %d, getoptarg[%d]: %c\n", j, j, getoptarg[j]);
+                  }
+                  getoptarg[j-current_index+1] = '\0';
+                  printf("Going to return: %s\n", getoptarg);
+               }
+               arg_processed = 1;
+               return arg[i];  
+            default:
+#ifdef GET_OPT_DEBUG_
+               fprintf(stderr,
+                       "Invalid flag --  %c\n",
+                       arg[i]);
+#endif
+               exit(2);
+            }
+         }
+      }
+      else
+      {
+         //check whether the current flag accepts parameters
+      }
+   }
+}
+
+
+//Returns: nr args it accepts, -1 otherwise
+int get_opt_valid_flag(char c)
+{
+   unsigned i;
+   for (i=0; i<strlen(global_flags); ++i)
+   {
+      if (global_flags[i] == c)
+      {
+         if (i == strlen(global_flags) - 1)
+         {
+            current_flag = c;
+            return 0;
+         }
+         else
+         {
+            if (global_flags[i+1] == '+')
+            {
+               current_flag = c;
+               return 1;
+            }
+            else if (global_flags[i+1] == '*')
+            {
+               current_flag = c;
+               return 2;
+            }
+            else
+            {
+               current_flag = c;
+               return 0;
+            }
+         }
+      }
+   }
+   return -1;
 }
 
 #endif /*GET_OPT_H_*/

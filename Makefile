@@ -1,5 +1,5 @@
-test: main.c 
-	gcc -Wall -Wextra -Wpedantic -I. main.c -o test
+test: main.c get_opt.h 
+	gcc -Wall -Wextra -Wpedantic -DGET_OPT_DEBUG_ -I. main.c -o test
 
 clean:
 	rm -f test *~
