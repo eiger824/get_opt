@@ -58,6 +58,13 @@ int get_opt(int argc, char* argv[])
    //Check if flags have been set
    if (format != -1)
    {
+      if (argc > 1 && argv[1][0] != '-')
+      {
+         fprintf(stderr, "FORMAT ERROR: First flag must start with '%s'\n",
+                 (format)?"--":"-");
+         get_opt_free();
+         exit(1);
+      }
       if (argnr < argc)
       {
          next = (char*) malloc(sizeof(char) * (strlen(argv[argnr]) + 1));
@@ -99,6 +106,8 @@ void get_opt_free()
 {
    free(next);
 }
+
+
 
 /**Function: get_opt_set_flags
    Description: This function sets the flags that the get_opt function needs
