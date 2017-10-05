@@ -7,9 +7,10 @@
 
 /* Pointer to the next argument */
 char* next = NULL;
+char* stringify = NULL;
 
 /* Array of subsequent arguments used with flags */
-char getoptarg[500];
+char* getoptarg = NULL;
 
 /* Pointer to the flags to read from */
 char global_flags[500];
@@ -26,11 +27,37 @@ char current_flag = '\0';
 /* Flag that determines if the i-th argument has been totally read */
 int arg_processed = 0;
 
-unsigned current_index = 1;
+unsigned current_index = 0;
 
 int get_opt_valid_flag(char c);
 void get_opt_free();
 int get_opt_parse_argv(char *arg);
+void get_opt_stringify(int argc, char* argv[]);
+
+
+void get_opt_stringify(int argc, char* argv[])
+{
+   unsigned i,j;
+   stringify = (char*) malloc(sizeof(char) * 500);
+   for (i=1; i<argc; ++i)
+   {
+      for (j=0; j<strlen(argv[i]); ++j)
+      {
+         stringify[current_index] = argv[i][j];
+         ++current_index;
+      }
+      if (i < argc - 1)
+      {
+         stringify[current_index] = ' ';
+         ++current_index;
+      }
+   }
+   stringify[current_index] = '\0';
+#ifdef GET_OPT_DEBUG_
+   printf("Stringified args: \"%s\" (strlen:%d)\n",
+          stringify, strlen(stringify));
+#endif
+}
 
 /**Function:     get_opt - A new CLI argument parser!
    Description:  Given the input arguments parsed from the command line when
@@ -55,36 +82,130 @@ int get_opt_parse_argv(char *arg);
 */
 int get_opt(int argc, char* argv[])
 {
-   //Check if flags have been set
+   unsigned i,l;
+   int n;
+      
    if (format != -1)
    {
-      if (argc > 1 && argv[1][0] != '-')
+      if (argc > 1)
       {
-         fprintf(stderr, "FORMAT ERROR: First flag must start with '%s'\n",
-                 (format)?"--":"-");
-         get_opt_free();
-         exit(1);
-      }
-      if (argnr < argc)
-      {
-         next = (char*) malloc(sizeof(char) * (strlen(argv[argnr]) + 1));
-         memcpy(next, argv[argnr], strlen(argv[argnr]));
-         next[strlen(argv[argnr])] = '\0';
+         if (!stringify)
+         {
+            get_opt_stringify(argc, argv);
+            current_index = 0;
+         }
 
-#ifdef GET_OPT_DEBUG_
-         printf("Current arg. number: %d, value is %s (current flag: %c)\n", argnr, next, current_flag);
-#endif
+         //Last check if flags didn't start with '-'
+         if (stringify[0] != '-')
+         {
+            fprintf(stderr, "ERROR: flags must start with '-'\n");
+            get_opt_free();
+            exit(2);
+         }
+         //And start the processing
+         for (l=current_index; l<strlen(stringify); ++l)
+         {
+            char c = stringify[l];
+            if (c == '-')
+            {
+               //new flag is coming
+               current_flag = 0;
+               arg_processed = 1;
+               ++current_index;
+            }
+            else if (c == ' ') //space
+            {
+               //TODO: just wait for now
+               ++current_index;
+            }
+            else
+            {
+               
+                  //c is a valid flag
+               if ((n = get_opt_valid_flag(c)) != -1)
+               {
+                  current_flag = c;
+                  int offset = 0;
+                  switch(n)
+                  {
+                  case 0:
+                     //option in 'c' does not accept args, just return
+                     printf("Valid flag '%c' found at index %d\n",
+                            c,
+                            current_index);
+                     arg_processed = 1; //change the flag
+                     current_index = l+1;
+                     return c;
+                  case 1:
+                     //option in 'c' accepts at least one argument
+                     //idea, parse all upcoming characters until the next '-'
+                     //is read or until the end or characters
+                     printf("Valid flag '%c' found at index %d\n",
+                            c,
+                            current_index);
+                     getoptarg = (char*)malloc(sizeof(char) * 500);
+                     //see where to start
+                     if (stringify[current_index+1] == ' ') offset=1;
+                     for (i=current_index + 1 + offset;
+                          i < (strlen(stringify));
+                          ++i)
+                     {
+                        if (stringify[i] == '-')
+                           break;
+                        getoptarg[i-current_index-offset-1] = stringify[i];
+                     }
+                     getoptarg[i-l] = '\0';
+                     //Now since the flag expects at least one arg, check if one
+                     //was provided
+                     if (!strlen(getoptarg))
+                     {
+                        fprintf(stderr,
+                                "ERROR -- flag '%c' requires at least an argument\n",
+                                c);
+                        get_opt_free();
+                        exit(2);
+                     }
+                     arg_processed = 1;
+                     //update index
+                     current_index = l + strlen(getoptarg)+1;
+                     return c;
+                  case 2:
+                     printf("Valid flag '%c' found at index %d\n",
+                            c,
+                            current_index);
+                     getoptarg = (char*)malloc(sizeof(char) * 500);
+                     //see where to start
+                     if (stringify[current_index+1] == ' ') offset=1;
+                     for (i=current_index + 1 + offset;
+                          i < (strlen(stringify));
+                          ++i)
+                     {
+                        if (stringify[i] == '-')
+                           break;
+                        getoptarg[i-current_index-offset-1] = stringify[i];
+                     }
+                     getoptarg[i-l] = '\0';
+                     arg_processed = 1;
+                     //update index
+                     current_index = l + strlen(getoptarg)+1;
+                     return c;
+                  }
+               }
+               else //invalid flag, just end the program
+               {
+                  fprintf(stderr, "Invalid flag --  %c\n", c);
+                  get_opt_free();
+                  exit(2);
+               }
+               
+            }
+         }
          
-         int c = get_opt_parse_argv(next);
-         
-         if (arg_processed)
-            ++argnr;
-         //TODO return real value!!
-         return c;
+         //When having looped through all characters in the string, return
+         return -1;
       }
       else
       {
-         printf("End of arguments. Returning -1\n");
          return -1;
       }
    }
@@ -93,6 +214,7 @@ int get_opt(int argc, char* argv[])
       fprintf(stderr, "ERROR: flags were not set");
       fprintf(stderr, " (did you forget to call get_opt_set_flags() ? )\n");
       fprintf(stderr, "Exiting now\n");
+      get_opt_free();
       exit(2);
    }
 }
@@ -105,6 +227,8 @@ int get_opt(int argc, char* argv[])
 void get_opt_free()
 {
    free(next);
+   free(stringify);
+   free(getoptarg);
 }
 
 
@@ -149,100 +273,6 @@ void get_opt_set_flags(const char* flags)
           global_flags,
           (format)?"long":"short");
 #endif
-}
-
-int get_opt_parse_argv(char *arg)
-{
-   if (strlen(arg) < 2)
-   {
-      //just a single character - invalid
-      return -1;
-   }
-   else //argv_i is valid
-   {
-      if (arg[0] == '-')
-      {
-         unsigned i;
-         for (i=current_index; i<strlen(arg); ++i)
-         {
-            int c;
-            switch ((c= get_opt_valid_flag(arg[i])))
-            {
-            case 0:
-#ifdef GET_OPT_DEBUG_
-               printf("Valid, non-argument-returning flag found: %c\n",
-                      arg[i]);
-#endif
-               if (i == strlen(arg)-1)
-               {
-                  current_index = 1;
-                  arg_processed = 1;
-               }
-               else
-               {
-                  ++current_index;
-               }
-               return arg[i];
-            case 1:
-#ifdef GET_OPT_DEBUG_
-               printf("Valid, at-least-one-argument-returning flag found: %c\n",
-                      arg[i]);
-#endif 
-               if (i == strlen(arg)-1)
-               {
-                  current_index = 1;
-               }
-               else
-               {
-                  ++current_index;
-                  unsigned j;
-                  for (j=current_index; j<strlen(arg); ++j)
-                  {
-                     getoptarg[j] = arg[j];
-                  }
-                  getoptarg[j-current_index+1] = '\0';
-               }
-               arg_processed = 1;
-               return arg[i];
-            case 2:
-#ifdef GET_OPT_DEBUG_
-               printf("Valid, optional-argument-returning flag found: %c\n",
-                      arg[i]);
-#endif 
-               if (i == strlen(arg)-1)
-               {
-                  current_index = 1;
-               }
-               else
-               {
-                  ++current_index;
-                  printf("Current index is %d\n", current_index);
-                  unsigned j;
-                  for (j=current_index; j<strlen(arg); ++j)
-                  {
-                     getoptarg[j-current_index] = arg[j];
-                     printf("j: %d, getoptarg[%d]: %c\n", j, j, getoptarg[j]);
-                  }
-                  getoptarg[j-current_index+1] = '\0';
-                  printf("Going to return: %s\n", getoptarg);
-               }
-               arg_processed = 1;
-               return arg[i];  
-            default:
-#ifdef GET_OPT_DEBUG_
-               fprintf(stderr,
-                       "Invalid flag --  %c\n",
-                       arg[i]);
-#endif
-               exit(2);
-            }
-         }
-      }
-      else
-      {
-         //check whether the current flag accepts parameters
-      }
-   }
 }
 
 
