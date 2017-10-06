@@ -6,8 +6,12 @@ int main(int argc, char* argv[])
 	int c;
         int a=0,b=0,c1=0,d=0,e=0;
         char* marg;
-        //get_opt_set_flags("all;block;coming-from*;delegate;enable+");
-        get_opt_set_flags("abc*de+");
+        
+        get_opt_set_flags("abcde", NULL, "00*0+"); //OK
+        //get_opt_set_flags(NULL, NULL, "00*0+"); //wrong
+        //get_opt_set_flags("abcde", NULL, NULL); //wrong
+        //get_opt_set_flags(NULL, "all;block;clear;delete;enable", "00*0+"); //OK
+        //get_opt_set_flags("abcde", "all;block;clear;delete;enable", "00*0+"); //OK
 	while ((c = get_opt(argc, argv)) != -1)
 	{
            switch(c)
