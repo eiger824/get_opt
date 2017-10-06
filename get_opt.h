@@ -193,7 +193,9 @@ int get_opt(int argc, char* argv[])
                      }
                      //update index
                      current_index = l + offset + strlen(getoptarg) + 1;
+#ifdef GET_OPT_DEBUG_
                      printf("Current index is now: %d\n", current_index);
+#endif
                      return c;
                   case 2:
 #ifdef GET_OPT_DEBUG_
