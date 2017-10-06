@@ -24,9 +24,6 @@ int argnr = 1;
 /* Holds the value of the currently being processed flag */
 char current_flag = '\0';
 
-/* Flag that determines if the i-th argument has been totally read */
-int arg_processed = 0;
-
 unsigned current_index = 0;
 
 int get_opt_valid_flag(char c);
@@ -37,7 +34,8 @@ void get_opt_stringify(int argc, char* argv[]);
 
 void get_opt_stringify(int argc, char* argv[])
 {
-   unsigned i,j;
+   unsigned j;
+   int i;
    stringify = (char*) malloc(sizeof(char) * 500);
    for (i=1; i<argc; ++i)
    {
@@ -54,7 +52,7 @@ void get_opt_stringify(int argc, char* argv[])
    }
    stringify[current_index] = '\0';
 #ifdef GET_OPT_DEBUG_
-   printf("Stringified args: \"%s\" (strlen:%d)\n",
+   printf("Stringified args: \"%s\" (strlen:%lu)\n",
           stringify, strlen(stringify));
 #endif
 }
@@ -110,7 +108,6 @@ int get_opt(int argc, char* argv[])
             {
                //new flag is coming
                current_flag = 0;
-               arg_processed = 1;
                ++current_index;
             }
             else if (c == ' ') //space
@@ -130,19 +127,22 @@ int get_opt(int argc, char* argv[])
                   {
                   case 0:
                      //option in 'c' does not accept args, just return
+#ifdef GET_OPT_DEBUG_
                      printf("Valid flag '%c' found at index %d\n",
                             c,
                             current_index);
-                     arg_processed = 1; //change the flag
+#endif
                      current_index = l+1;
                      return c;
                   case 1:
                      //option in 'c' accepts at least one argument
                      //idea, parse all upcoming characters until the next '-'
                      //is read or until the end or characters
+#ifdef GET_OPT_DEBUG_
                      printf("Valid flag '%c' found at index %d\n",
                             c,
                             current_index);
+#endif
                      getoptarg = (char*)malloc(sizeof(char) * 500);
                      //see where to start
                      if (stringify[current_index+1] == ' ') offset=1;
@@ -165,14 +165,15 @@ int get_opt(int argc, char* argv[])
                         get_opt_free();
                         exit(2);
                      }
-                     arg_processed = 1;
                      //update index
-                     current_index = l + strlen(getoptarg)+1;
+                     current_index = l + strlen(getoptarg) + 1;
                      return c;
                   case 2:
+#ifdef GET_OPT_DEBUG_
                      printf("Valid flag '%c' found at index %d\n",
                             c,
                             current_index);
+#endif
                      getoptarg = (char*)malloc(sizeof(char) * 500);
                      //see where to start
                      if (stringify[current_index+1] == ' ') offset=1;
@@ -185,9 +186,8 @@ int get_opt(int argc, char* argv[])
                         getoptarg[i-current_index-offset-1] = stringify[i];
                      }
                      getoptarg[i-l] = '\0';
-                     arg_processed = 1;
                      //update index
-                     current_index = l + strlen(getoptarg)+1;
+                     current_index = l + strlen(getoptarg) + 1;
                      return c;
                   }
                }

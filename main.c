@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <unistd.h>
 #include "get_opt.h"
 
 int main(int argc, char* argv[])
@@ -33,7 +32,6 @@ int main(int argc, char* argv[])
               e=1;
               break;
            }
-           usleep(500000);
 	}
 
         printf("(a,b,c,d,e):(%d,%d,%d,%d,%d)\n",a,b,c1,d,e);
