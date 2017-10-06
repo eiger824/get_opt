@@ -3,14 +3,14 @@ ifeq ($(DEBUG),0)
 	MACRO=
 endif
 
-all: test test2
+all: test_in_c test_in_cpp
 
-test: main.c get_opt.h 
-	gcc -Wall -Wextra -Wpedantic ${MACRO} -I. main.c -o test
+test_in_c: main.c get_opt.h 
+	gcc -Wall -Wextra -Wpedantic ${MACRO} -I. main.c -o test_in_c
 
-test2: main.cpp get_opt.h
-	g++ -Wall -Wextra -Wpedantic --std=c++1y ${MACRO} -I. main.cpp -o test2
+test_in_cpp: main.cpp get_opt.h
+	g++ -Wall -Wextra -Wpedantic --std=c++1y ${MACRO} -I. main.cpp -o test_in_cpp
 	
 
 clean:
-	rm -f test test2 *~
+	rm -f test_in_c test_in_cpp *~
