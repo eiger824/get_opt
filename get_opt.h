@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 /* Pointer to the next argument */
 char* next = NULL;
@@ -341,6 +342,11 @@ void get_opt_set_flags(const char* short_flags,
    else
    {
       flags_set = 1;
+      //last check, lengths of short_flags == occurrences
+      if (selected_format == SHORT)
+      {
+         assert(strlen(global_short_flags) == strlen(occurrences));
+      }
    }
 
 #ifdef GET_OPT_DEBUG_
