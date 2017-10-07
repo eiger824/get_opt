@@ -55,7 +55,8 @@ int get_opt_parse_argv(char *arg);
 void get_opt_stringify(int argc, char* argv[]);
 void get_opt_print_flags();
 void get_opt_2_list(char* buffer);
-
+int get_opt(int argc, char* argv[]);
+char* get_opt_long(int argc, char* argv[]);
 
 void get_opt_stringify(int argc, char* argv[])
 {
@@ -80,6 +81,94 @@ void get_opt_stringify(int argc, char* argv[])
    printf("Stringified args: \"%s\" (strlen:%lu)\n",
           stringify, strlen(stringify));
 #endif
+}
+
+char* get_opt_long(int argc, char* argv[])
+{
+   if (flags_set != -1)
+   {
+      if (argc > 1)
+      {
+         if (!stringify)
+         {
+            get_opt_stringify(argc, argv);
+            current_index = 0;
+         }
+//free getoptarg every time this function is called
+         if (getoptarg != NULL)
+         {
+            for (unsigned i=0; i<no_entries; ++i)
+            {
+               free(getoptarg[i]);
+            }
+            free(getoptarg);
+            no_entries = 0;
+            getoptarg = NULL;
+         }
+         //loop through the input args
+         unsigned i;
+         for (i=current_index; i<strlen(stringify); ++i)
+         {
+            char *c = strstr(stringify, "--");
+            if (c != NULL)
+            {
+               int index = c - stringify;
+               //add up current_index (two incoming hyphens)
+               stringify+=2;
+               //read until end of stringify or space or '=' symbol
+               unsigned j;
+               char* flag = (char*) malloc(sizeof(char) * 50);
+               for (j=0;
+                    stringify[j] == '\0' ||
+                       stringify[j] == ' ' ||
+                       stringify[j] == '=';
+                    ++j)
+               {
+                  flag[j] = stringify[j];
+               }
+               flag[j] = '\0';
+               if (// check_for_valid_long_flag(flag) != -1
+                  1
+                  )
+               {
+                  return flag;
+               }
+               else
+               {
+                  fprintf(stderr, "Invalid flag -- \"%s\"\n", flag);
+                  get_opt_free();
+                  exit(2);
+               }
+            }
+            else
+            {
+               //no valid flags, return
+               //last check
+               if (strchr(stringify, '-') != NULL)
+               {
+                  fprintf(stderr, "Invalid flag format (long format selected)\n");
+                  get_opt_free();
+                  exit(2);
+               }
+               return NULL;
+            }
+         }
+      }
+      else
+      {
+         return NULL;
+      }
+   }
+   else
+   {
+      fprintf(stderr, "ERROR: flags were not set\n");
+      fprintf(stderr, " (did you forget to call get_opt_set_flags() ? )\n");
+      fprintf(stderr, " (did you forget to set the flags' occurrences ? )\n");
+      fprintf(stderr, "Exiting now\n");
+      get_opt_free();
+      exit(2);
+   }
+   return NULL;
 }
 
 /**Function:     get_opt - A new CLI argument parser!
