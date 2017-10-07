@@ -505,7 +505,7 @@ void get_opt_print_flags()
 void get_opt_2_list(char* buffer)
 {
    //Trim every possible trailing whitespaces
-   unsigned i,init_len = strlen(buffer);
+   unsigned i, init_len = strlen(buffer);
    if (init_len > 0)
    {
       for (i=init_len-1; ; --i)
@@ -540,7 +540,7 @@ void get_opt_2_list(char* buffer)
          if (c != NULL)
          {
             at = c - buffer;
-            memcpy(getoptarg[i], buffer, at);
+            memcpy(getoptarg[i], buffer, at+1);
             getoptarg[i][at] = '\0';
 #ifdef GET_OPT_DEBUG_
             printf("New element appended: \"%s\"\n", getoptarg[i]);
@@ -551,7 +551,7 @@ void get_opt_2_list(char* buffer)
          {
             //last element, just copy @buffer in the list
             memcpy(getoptarg[i], buffer, strlen(buffer)+1);
-            getoptarg[i][strlen(buffer)+1] = '\0';
+            getoptarg[i][strlen(buffer)] = '\0';
 #ifdef GET_OPT_DEBUG_
             printf("New element appended: \"%s\"\n", getoptarg[i]);
 #endif  
