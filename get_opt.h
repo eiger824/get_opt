@@ -6,12 +6,17 @@
 #include <string.h>
 #include <assert.h>
 
-/* Pointer to the next argument */
-char* next = NULL;
+/* Pointer to the list of subsequent arguments used with flags */
+char** getoptarg = NULL;
+
+/* Number of entries getoptarg will have in order
+   to free them all in every call to get_opt */
+unsigned no_entries = 0;
+
+/* Pointer to the stringified arguments */
 char* stringify = NULL;
 
-/* Array of subsequent arguments used with flags */
-char* getoptarg = NULL;
+char* tmp_args = NULL;
 
 /* Pointer to the short flags to read from */
 char* global_short_flags = NULL;
@@ -31,16 +36,13 @@ int flags_set = -1;
  2->both
 */
 typedef enum {
-   NONE=-1,
+   NONE = -1,
    SHORT,
    LONG,
    BOTH
 } FORMAT;
 
-FORMAT selected_format=NONE;
-
-/* Counter with the current argument number */
-int argnr = 1;
+FORMAT selected_format = NONE;
 
 /* Holds the value of the currently being processed flag */
 char current_flag = '\0';
@@ -52,6 +54,7 @@ void get_opt_free();
 int get_opt_parse_argv(char *arg);
 void get_opt_stringify(int argc, char* argv[]);
 void get_opt_print_flags();
+void get_opt_2_list(char* buffer);
 
 
 void get_opt_stringify(int argc, char* argv[])
@@ -85,7 +88,7 @@ void get_opt_stringify(int argc, char* argv[])
                  parsed arguments and set the corresponding runtime values.
                 
                  This modification of the well-known getopt function, defined
-                 in <getopt.h>, supports both long and short arguments, i.e.,
+                 in <getopt.h>, supports both long and short argguments, i.e.,
                  one can input flags in both -h format or --help format.
                  
                  This function shall return the currently parsed option and
@@ -114,7 +117,19 @@ int get_opt(int argc, char* argv[])
             get_opt_stringify(argc, argv);
             current_index = 0;
          }
-
+         
+         //free getoptarg every time this function is called
+         if (getoptarg != NULL)
+         {
+            for (unsigned i=0; i<no_entries; ++i)
+            {
+               free(getoptarg[i]);
+            }
+            free(getoptarg);
+            no_entries = 0;
+            getoptarg = NULL;
+         }
+         
          //Last check if flags didn't start with '-'
          if (stringify[0] != '-')
          {
@@ -169,7 +184,7 @@ int get_opt(int argc, char* argv[])
                             c,
                             current_index);
 #endif
-                     getoptarg = (char*)malloc(sizeof(char) * 500);
+                     tmp_args = (char*)malloc(sizeof(char) * 500);
                      //see where to start
                      if (stringify[current_index+1] == ' ') offset=1;
                      for (i=current_index + 1 + offset;
@@ -178,12 +193,12 @@ int get_opt(int argc, char* argv[])
                      {
                         if (stringify[i] == '-')
                            break;
-                        getoptarg[i-current_index-offset-1] = stringify[i];
+                        tmp_args[i-current_index-offset-1] = stringify[i];
                      }
-                     getoptarg[i-l] = '\0';
+                     tmp_args[i-l] = '\0';
                      //Now since the flag expects at least one arg, check if one
                      //was provided
-                     if (!strlen(getoptarg))
+                     if (!strlen(tmp_args))
                      {
                         fprintf(stderr,
                                 "ERROR -- flag '%c' requires at least an argument\n",
@@ -191,8 +206,10 @@ int get_opt(int argc, char* argv[])
                         get_opt_free();
                         exit(2);
                      }
+                     //transform to list
+                     get_opt_2_list(tmp_args);
                      //update index
-                     current_index = l + offset + strlen(getoptarg) + 1;
+                     current_index = l + offset + strlen(tmp_args) + 1;
 #ifdef GET_OPT_DEBUG_
                      printf("Current index is now: %d\n", current_index);
 #endif
@@ -203,7 +220,7 @@ int get_opt(int argc, char* argv[])
                             c,
                             current_index);
 #endif
-                     getoptarg = (char*)malloc(sizeof(char) * 500);
+                     tmp_args = (char*)malloc(sizeof(char) * 500);
                      //see where to start
                      if (stringify[current_index+1] == ' ') offset=1;
                      for (i=current_index + 1 + offset;
@@ -212,11 +229,12 @@ int get_opt(int argc, char* argv[])
                      {
                         if (stringify[i] == '-')
                            break;
-                        getoptarg[i-current_index-offset-1] = stringify[i];
+                        tmp_args[i-current_index-offset-1] = stringify[i];
                      }
-                     getoptarg[i-l] = '\0';
+                     tmp_args[i-l] = '\0';
+                     get_opt_2_list(tmp_args);
                      //update index
-                     current_index = l + offset + strlen(getoptarg) + 1;
+                     current_index = l + offset + strlen(tmp_args) + 1;
                      return c;
                   }
                }
@@ -256,9 +274,12 @@ int get_opt(int argc, char* argv[])
  */
 void get_opt_free()
 {
-   free(next);
    free(stringify);
-   free(getoptarg);
+   free(tmp_args);
+   if (getoptarg != NULL)
+   {
+      free(getoptarg);
+   }
    free(global_short_flags);
    free(global_long_flags);
    free(occurrences);
@@ -480,5 +501,70 @@ void get_opt_print_flags()
    }
 }
 #endif
+
+void get_opt_2_list(char* buffer)
+{
+   //Trim every possible trailing whitespaces
+   unsigned i,init_len = strlen(buffer);
+   if (init_len > 0)
+   {
+      for (i=init_len-1; ; --i)
+      {
+         if (buffer[i] == ' ') buffer[i] = 0;
+         else break;
+      }
+      init_len = i+1;
+#ifdef GET_OPT_DEBUG_
+      printf("Buffer to transform: \"%s\"\n", buffer);
+#endif
+      //Count the number of items the list will contain
+      for (no_entries=0; buffer[no_entries];
+           buffer[no_entries] == ' ' ?
+              no_entries++ :
+              *buffer++);
+      no_entries++;
+#ifdef GET_OPT_DEBUG_
+      printf("No. items: %d\n", no_entries);
+#endif
+      buffer -= (init_len-no_entries+1);
+   
+      //initiate the string list with the number of parsed arguments
+      getoptarg = (char**) malloc ((no_entries + 1) * sizeof(char*));
+   
+      for (i=0; i<no_entries; ++i)
+      {
+         //initialize each argument field with a big size
+         getoptarg[i] = (char*) malloc(sizeof(char) * 500);
+         char *c = strchr(buffer, ' ');
+         int at;
+         if (c != NULL)
+         {
+            at = c - buffer;
+            memcpy(getoptarg[i], buffer, at);
+            getoptarg[i][at] = '\0';
+#ifdef GET_OPT_DEBUG_
+            printf("New element appended: \"%s\"\n", getoptarg[i]);
+#endif
+            buffer+=(at+1);
+         }
+         else
+         {
+            //last element, just copy @buffer in the list
+            memcpy(getoptarg[i], buffer, strlen(buffer)+1);
+            getoptarg[i][strlen(buffer)+1] = '\0';
+#ifdef GET_OPT_DEBUG_
+            printf("New element appended: \"%s\"\n", getoptarg[i]);
+#endif  
+         }
+      }
+      //and zero-terminate the list
+      getoptarg[i] = 0;
+   }
+   else
+   {
+      getoptarg = (char**) malloc(1 * sizeof (char*));
+      getoptarg[0] = 0;
+   }
+}
 
 #endif /*GET_OPT_H_*/
