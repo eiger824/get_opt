@@ -14,8 +14,8 @@ char** getoptarg = NULL;
 unsigned no_entries = 0;
 
 /* Pointer to the stringified arguments */
-char* stringify = NULL;
-char* stringify_init = NULL;
+char* input_flags = NULL;
+char* input_flags_init = NULL;
 
 char* tmp_args = NULL;
 
@@ -64,26 +64,26 @@ void get_opt_stringify(int argc, char* argv[])
 {
    unsigned j;
    int i;
-   stringify = (char*) malloc(sizeof(char) * 500);
+   input_flags = (char*) malloc(sizeof(char) * 500);
    for (i=1; i<argc; ++i)
    {
       for (j=0; j<strlen(argv[i]); ++j)
       {
-         stringify[current_index] = argv[i][j];
+         input_flags[current_index] = argv[i][j];
          ++current_index;
       }
       if (i < argc - 1)
       {
-         stringify[current_index] = ' ';
+         input_flags[current_index] = ' ';
          ++current_index;
       }
    }
-   stringify[current_index] = '\0';
-   //stringify_init points to the same memory address as stringify
-   stringify_init = stringify;
+   input_flags[current_index] = '\0';
+   //input_flags_init points to the same memory address as input_flags
+   input_flags_init = input_flags;
 #ifdef GET_OPT_DEBUG_
    printf("Stringified args: \"%s\" (strlen:%lu)\n",
-          stringify, strlen(stringify));
+          input_flags, strlen(input_flags));
 #endif
 }
 
@@ -93,7 +93,7 @@ char* get_opt_long(int argc, char* argv[])
    {
       if (argc > 1)
       {
-         if (!stringify)
+         if (!input_flags)
          {
             get_opt_stringify(argc, argv);
             current_index = 0;
@@ -111,24 +111,24 @@ char* get_opt_long(int argc, char* argv[])
          }
          //loop through the input args
          unsigned i;
-         for (i=current_index; i<strlen(stringify); ++i)
+         for (i=current_index; i<strlen(input_flags); ++i)
          {
-            char *c = strstr(stringify, "--");
+            char *c = strstr(input_flags, "--");
             if (c != NULL)
             {
-               int index = c - stringify;
+               int index = c - input_flags;
                //add up current_index (two incoming hyphens)
-               stringify+=2;
-               //read until end of stringify or space or '=' symbol
+               input_flags+=2;
+               //read until end of input_flags or space or '=' symbol
                unsigned j;
                char* flag = (char*) malloc(sizeof(char) * 50);
-               for (j=0; strlen(stringify); ++j)
+               for (j=0; strlen(input_flags); ++j)
                {
-                  if (stringify[j] == '\0' ||
-                      stringify[j] == ' ' ||
-                      stringify[j] == '=')
+                  if (input_flags[j] == '\0' ||
+                      input_flags[j] == ' ' ||
+                      input_flags[j] == '=')
                      break;
-                  flag[j] = stringify[j];
+                  flag[j] = input_flags[j];
                }
                flag[j] = '\0';
                int n;
@@ -136,7 +136,7 @@ char* get_opt_long(int argc, char* argv[])
                {
                   if (n == 0) //no args
                   {
-                     stringify+=(strlen(flag)+1);
+                     input_flags+=(strlen(flag)+1);
                      return flag;
                   }
                   return flag;
@@ -153,7 +153,7 @@ char* get_opt_long(int argc, char* argv[])
             {
                //no valid flags, return
                //last check
-               if (strchr(stringify, '-') != NULL)
+               if (strchr(input_flags, '-') != NULL)
                {
                   fprintf(stderr, "Invalid flag format (long format selected)\n");
                   get_opt_free();
@@ -210,7 +210,7 @@ int get_opt(int argc, char* argv[])
    {
       if (argc > 1)
       {
-         if (!stringify)
+         if (!input_flags)
          {
             get_opt_stringify(argc, argv);
             current_index = 0;
@@ -229,16 +229,16 @@ int get_opt(int argc, char* argv[])
          }
          
          //Last check if flags didn't start with '-'
-         if (stringify[0] != '-')
+         if (input_flags[0] != '-')
          {
             fprintf(stderr, "ERROR: flags must start with '-'\n");
             get_opt_free();
             exit(2);
          }
          //And start the processing
-         for (l=current_index; l<strlen(stringify); ++l)
+         for (l=current_index; l<strlen(input_flags); ++l)
          {
-            char c = stringify[l];
+            char c = input_flags[l];
             if (c == '-')
             {
                //new flag is coming
@@ -284,14 +284,14 @@ int get_opt(int argc, char* argv[])
 #endif
                      tmp_args = (char*)malloc(sizeof(char) * 500);
                      //see where to start
-                     if (stringify[current_index+1] == ' ') offset=1;
+                     if (input_flags[current_index+1] == ' ') offset=1;
                      for (i=current_index + 1 + offset;
-                          i < (strlen(stringify));
+                          i < (strlen(input_flags));
                           ++i)
                      {
-                        if (stringify[i] == '-')
+                        if (input_flags[i] == '-')
                            break;
-                        tmp_args[i-current_index-offset-1] = stringify[i];
+                        tmp_args[i-current_index-offset-1] = input_flags[i];
                      }
                      tmp_args[i-l] = '\0';
                      //Now since the flag expects at least one arg, check if one
@@ -320,14 +320,14 @@ int get_opt(int argc, char* argv[])
 #endif
                      tmp_args = (char*)malloc(sizeof(char) * 500);
                      //see where to start
-                     if (stringify[current_index+1] == ' ') offset=1;
+                     if (input_flags[current_index+1] == ' ') offset=1;
                      for (i=current_index + 1 + offset;
-                          i < (strlen(stringify));
+                          i < (strlen(input_flags));
                           ++i)
                      {
-                        if (stringify[i] == '-')
+                        if (input_flags[i] == '-')
                            break;
-                        tmp_args[i-current_index-offset-1] = stringify[i];
+                        tmp_args[i-current_index-offset-1] = input_flags[i];
                      }
                      tmp_args[i-l] = '\0';
                      get_opt_2_list(tmp_args);
@@ -375,10 +375,10 @@ void get_opt_free()
    free(global_short_flags);
    free(global_long_flags);
    free(occurrences);
-   //assign back stringify to where it pointed at the beginning
-   stringify = stringify_init;
-   free(stringify);
-   free(stringify_init);
+   //assign back input_flags to where it pointed at the beginning
+   //no need to free input_flags_init
+   input_flags = input_flags_init;
+   free(input_flags);
    free(tmp_args);
    free(getoptarg);
 }
@@ -512,6 +512,22 @@ int get_opt_valid_long_flag(char* flag)
    char *p = strstr(global_long_flags, flag);
    if (p != NULL)
    {
+      //last check for "partial" matches
+      //e.g. if a valid flag is for example "all",
+      //but flag="a" was passed onto this function.
+      //strstr will still give us a match
+      char *q = strchr(p, ';');
+      if (q != NULL)
+      {
+         for (unsigned i=0; i <q-p; ++i)
+         {
+            if (p[i] != flag[i]) return -1;
+         }
+      }
+      else //last flag
+      {
+         if (strcmp(q, flag)) return -1;
+      }
       unsigned flag_nr;
       for (flag_nr=0; p[flag_nr]; (p[flag_nr] == ';') ? ++flag_nr : *p++);
 #ifdef GET_OPT_DEBUG_
@@ -526,7 +542,6 @@ int get_opt_valid_long_flag(char* flag)
    }
    else
    {
-      free(p);
       return -1;
    }
 }
