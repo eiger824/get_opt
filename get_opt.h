@@ -89,6 +89,7 @@ void get_opt_stringify(int argc, char* argv[])
 
 char* get_opt_long(int argc, char* argv[])
 {
+   printf("\n");
    if (flags_set != -1)
    {
       if (argc > 1)
@@ -137,9 +138,21 @@ char* get_opt_long(int argc, char* argv[])
                   if (n == 0) //no args
                   {
                      input_flags+=(strlen(flag)+1);
+                     current_index = 0;
                      return flag;
                   }
-                  return flag;
+                  else if (n == 1) //at least one
+                  {
+                     //tmp_args = (char*) malloc( (sizeof *tmp_args) * 500);
+                     //TODO - parse args
+                     return flag;
+                  }
+                  else //zero or more
+                  {
+                     //tmp_args = (char*) malloc( (sizeof *tmp_args) * 500);
+                     //TODO - parse args
+                     return flag;
+                  }
                }
                else
                {
@@ -530,8 +543,9 @@ int get_opt_valid_long_flag(char* flag)
       }
       unsigned flag_nr;
       for (flag_nr=0; p[flag_nr]; (p[flag_nr] == ';') ? ++flag_nr : *p++);
+      flag_nr = 5 - flag_nr - 1;
 #ifdef GET_OPT_DEBUG_
-      printf("Flag \"%s\" is at flag position: %d/4\n", flag, 5 - flag_nr - 1);
+      printf("Flag \"%s\" is at flag position: %d/4\n", flag, flag_nr);
 #endif
       //assert that flag was found in a valid range
       assert(0 <= flag_nr && flag_nr < strlen(occurrences));
