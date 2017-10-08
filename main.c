@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
            {
               b=1;
            }
-           else if (!strcmp(p, "create"))
+           else if (!strcmp(p, "clear"))
            {
               c1=1;
            }
@@ -90,6 +90,7 @@ int main(int argc, char* argv[])
 
         printf("(a,b,c,d,e):(%d,%d,%d,%d,%d)\n",a,b,c1,d,e);
         get_opt_free();
+        printf("Get opt's resources have been free'd\n");
         
         //free arg lists
         free(arg_list);

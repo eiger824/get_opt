@@ -15,6 +15,7 @@ unsigned no_entries = 0;
 
 /* Pointer to the stringified arguments */
 char* stringify = NULL;
+char* stringify_init = NULL;
 
 char* tmp_args = NULL;
 
@@ -50,6 +51,7 @@ char current_flag = '\0';
 unsigned current_index = 0;
 
 int get_opt_valid_flag(char c);
+int get_opt_valid_long_flag(char* flag);
 void get_opt_free();
 int get_opt_parse_argv(char *arg);
 void get_opt_stringify(int argc, char* argv[]);
@@ -77,6 +79,8 @@ void get_opt_stringify(int argc, char* argv[])
       }
    }
    stringify[current_index] = '\0';
+   //stringify_init points to the same memory address as stringify
+   stringify_init = stringify;
 #ifdef GET_OPT_DEBUG_
    printf("Stringified args: \"%s\" (strlen:%lu)\n",
           stringify, strlen(stringify));
@@ -118,25 +122,30 @@ char* get_opt_long(int argc, char* argv[])
                //read until end of stringify or space or '=' symbol
                unsigned j;
                char* flag = (char*) malloc(sizeof(char) * 50);
-               for (j=0;
-                    stringify[j] == '\0' ||
-                       stringify[j] == ' ' ||
-                       stringify[j] == '=';
-                    ++j)
+               for (j=0; strlen(stringify); ++j)
                {
+                  if (stringify[j] == '\0' ||
+                      stringify[j] == ' ' ||
+                      stringify[j] == '=')
+                     break;
                   flag[j] = stringify[j];
                }
                flag[j] = '\0';
-               if (// check_for_valid_long_flag(flag) != -1
-                  1
-                  )
+               int n;
+               if ((n = get_opt_valid_long_flag(flag)) != -1)
                {
+                  if (n == 0) //no args
+                  {
+                     stringify+=(strlen(flag)+1);
+                     return flag;
+                  }
                   return flag;
                }
                else
                {
                   fprintf(stderr, "Invalid flag -- \"%s\"\n", flag);
                   get_opt_free();
+                  free(flag);
                   exit(2);
                }
             }
@@ -363,15 +372,15 @@ int get_opt(int argc, char* argv[])
  */
 void get_opt_free()
 {
-   free(stringify);
-   free(tmp_args);
-   if (getoptarg != NULL)
-   {
-      free(getoptarg);
-   }
    free(global_short_flags);
    free(global_long_flags);
    free(occurrences);
+   //assign back stringify to where it pointed at the beginning
+   stringify = stringify_init;
+   free(stringify);
+   free(stringify_init);
+   free(tmp_args);
+   free(getoptarg);
 }
 
 
@@ -496,6 +505,30 @@ int get_opt_valid_flag(char c)
       }
    }
    return -1;
+}
+
+int get_opt_valid_long_flag(char* flag)
+{
+   char *p = strstr(global_long_flags, flag);
+   if (p != NULL)
+   {
+      unsigned flag_nr;
+      for (flag_nr=0; p[flag_nr]; (p[flag_nr] == ';') ? ++flag_nr : *p++);
+#ifdef GET_OPT_DEBUG_
+      printf("Flag \"%s\" is at flag position: %d/4\n", flag, 5 - flag_nr - 1);
+#endif
+      //assert that flag was found in a valid range
+      assert(0 <= flag_nr && flag_nr < strlen(occurrences));
+      //then return how many parameters it accepts
+      if (occurrences[flag_nr] == '0') return 0;
+      else if (occurrences[flag_nr] == '+') return 1;
+      else return 2;
+   }
+   else
+   {
+      free(p);
+      return -1;
+   }
 }
 
 #ifdef GET_OPT_DEBUG_

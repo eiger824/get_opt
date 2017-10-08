@@ -1,15 +1,17 @@
-MACRO=
-ifeq ($(DEBUG),1)
-	MACRO=-DGET_OPT_DEBUG_
+MACRO=-DGET_OPT_DEBUG_
+GDB=-g
+ifeq ($(DEBUG),0)
+	MACRO=
+	GDB=
 endif
 
 all: test_in_c test_in_cpp
 
 test_in_c: main.c get_opt.h
-	gcc -Wall -Wextra -Wpedantic ${MACRO} -I. main.c -o test_in_c
+	gcc -Wall -Wextra -Wpedantic ${MACRO} ${GDB} -I. main.c -o test_in_c
 
 test_in_cpp: main.cpp get_opt.h
-	g++ -Wall -Wextra -Wpedantic --std=c++1y ${MACRO} -I. main.cpp -o test_in_cpp
+	g++ -Wall -Wextra -Wpedantic --std=c++1y ${MACRO} ${GDB} -I. main.cpp -o test_in_cpp
 
 
 clean:
