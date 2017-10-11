@@ -28,39 +28,39 @@ typedef enum
    SHORT_INVALID_FLAG,
    NO_PARAMS,
    NO_FLAGS_SET
-} ERROR;
+}
+ERROR;
 
-char**   getoptarg          = NULL; /* Pointer to the list of subsequent
-                                       arguments used with flags */
-unsigned no_entries         = 0;    /* Number of entries getoptarg will have in
-                                       order to free them all in every call to
-                                       get_opt */
-char*    input_flags        = NULL; /* Pointer to the stringified arguments */
+char**          getoptarg          = NULL;  /* Pointer to the list of subsequent
+                                              arguments used with flags */
+unsigned        getoptargcnt       = 0;     /* Number of entries getoptarg will
+                                              have in order to free them all in
+                                              every call to get_opt */
+ERROR           getopterr          = NOERR; /* Error flag that will be set if
+                                               errors are encountered */
+static char*    input_flags        = NULL;  /* Pointer to the stringified
+                                              arguments */
+static char*    input_flags_init   = NULL;  /* Pointer to the initial input flag
+                                              char */
+static char*    tmp_args           = NULL;  /* Pointer to store the arguments a
+                                              flag may accept */
+static char*    global_short_flags = NULL;  /* Pointer to the short flags to read
+                                              from */
+static char*    global_long_flags  = NULL;  /* Pointer to the long flags to read
+                                              from */
+static char*    occurrences        = NULL;  /* Pointer to the occurrences of the
+                                              flags */
+static int      flags_set          = -1;    /* Indicates if flags have been set */
 
-char*    input_flags_init   = NULL; /* Pointer to the initial input flag char */
+static FORMAT   selected_format    = NONE;  /* Selected flag format */
 
-char*    tmp_args           = NULL; /* Pointer to store the arguments a flag
-                                       may accept */
-char*    global_short_flags = NULL; /* Pointer to the short flags to read from */
-
-char*    global_long_flags  = NULL; /* Pointer to the long flags to read from */
-
-char*    occurrences        = NULL; /* Pointer to the occurrences of the flags */
-
-int      flags_set          = -1;   /* Indicates if flags have been set */
-
-FORMAT   selected_format    = NONE; /* Selected flag format */
-
-ERROR    getopterr          = NOERR;/* Error flag that will be set if errors are
-                                       encountered */
-
-char     current_flag       = '\0'; /* Holds the value of the currently being
-                                       processed short flag */
-char*    current_long_flag  = NULL; /* Holds the value of the currently being
-                                       processed long flag */
-
-unsigned current_index      = 0;    /* Holds the count of the current read
-                                       character in the stringifies arguments */
+static char     current_flag       = '\0';  /* Holds the value of the currently
+                                              being processed short flag */
+static char*    current_long_flag  = NULL;  /* Holds the value of the currently
+                                              being processed long flag */
+static unsigned current_index      = 0;     /* Holds the count of the current read
+                                              character in the stringifies
+                                              arguments */
 
 
 /************* Functions *************/
@@ -118,12 +118,12 @@ char* get_opt_long(int argc, char* argv[])
          //free getoptarg every time this function is called
          if (getoptarg != NULL)
          {
-            for (unsigned i=0; i<no_entries; ++i)
+            for (unsigned i=0; i<getoptargcnt; ++i)
             {
                free(getoptarg[i]);
             }
             free(getoptarg);
-            no_entries = 0;
+            getoptargcnt = 0;
             getoptarg = NULL;
          }
          //loop through the input args
@@ -376,12 +376,12 @@ int get_opt(int argc, char* argv[])
          //free getoptarg every time this function is called
          if (getoptarg != NULL)
          {
-            for (unsigned i=0; i<no_entries; ++i)
+            for (unsigned i=0; i<getoptargcnt; ++i)
             {
                free(getoptarg[i]);
             }
             free(getoptarg);
-            no_entries = 0;
+            getoptargcnt = 0;
             getoptarg = NULL;
          }
          
@@ -819,20 +819,20 @@ void get_opt_2_list(char* buffer)
 #endif
       char *buffer_init = buffer;
       //Count the number of items the list will contain
-      for (no_entries=0; buffer[no_entries];
-           buffer[no_entries] == ' ' ?
-              no_entries++ :
+      for (getoptargcnt=0; buffer[getoptargcnt];
+           buffer[getoptargcnt] == ' ' ?
+              getoptargcnt++ :
               *buffer++);
-      no_entries++;
+      getoptargcnt++;
 #ifdef GET_OPT_DEBUG_
-      printf("No. items: %d\n", no_entries);
+      printf("No. items: %d\n", getoptargcnt);
 #endif
       //get to the original position
       buffer = buffer_init;
       //initiate the string list with the number of parsed arguments
-      getoptarg = (char**) malloc ((no_entries + 1) * sizeof(char*));
+      getoptarg = (char**) malloc ((getoptargcnt + 1) * sizeof(char*));
    
-      for (i=0; i<no_entries; ++i)
+      for (i=0; i<getoptargcnt; ++i)
       {
          //initialize each argument field with a big size
          getoptarg[i] = (char*) malloc(sizeof(char) * 500);

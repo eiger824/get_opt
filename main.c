@@ -96,12 +96,16 @@ int main(int argc, char* argv[])
            else if (!strcmp(p, "enable"))
            {
               e=1;
+              for (unsigned i=0; i<getoptargcnt; ++i)
+              {
+                 printf("Parsed: \"%s\"\n", getoptarg[i]);
+              }
            }
-		   else if (!strcmp(p, "help"))
-		   {
-			  h=1;
-		      help();
-	 	   }
+           else if (!strcmp(p, "help"))
+           {
+              h=1;
+              help();
+           }
         }
 
         printf("(a,b,c,d,e,h):(%d,%d,%d,%d,%d,%d)\n",a,b,c1,d,e,h);
