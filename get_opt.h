@@ -21,6 +21,7 @@ typedef enum
    MISSING_ARG,
    INVALID_FLAG,
    ARG_REQUIRED,
+   NO_ARG_ACCEPTED,
    WRONG_FORMAT,
    SHORT_ARG_REQUIRED,
    SHORT_WRONG_FORMAT,
@@ -136,6 +137,10 @@ char* get_opt_long(int argc, char* argv[])
             {
                if (c - input_flags != 0) //must be at the begining
                {
+                  //init current long flag in case it's not
+                  if (current_long_flag == NULL)
+                     current_long_flag = (char*) malloc((sizeof *current_long_flag) * 100);
+
                   memcpy(current_long_flag, input_flags, c - input_flags);
                   current_long_flag[c - input_flags - 1] = '\0';
                   get_opt_error(WRONG_FORMAT);
@@ -171,6 +176,7 @@ char* get_opt_long(int argc, char* argv[])
                   }
                   else if (n == 1 || n == 2)
                   {
+                     printf("n was %d, input_flags: \"%s\"\n", n, input_flags);
                      //TODO - parse args
                      //check: if current flag is the last part of input_flags
                      if (strlen(input_flags) == strlen(flag))
@@ -187,6 +193,7 @@ char* get_opt_long(int argc, char* argv[])
                         }
                      }
                      input_flags+=strlen(flag);
+                     printf("n was %d, input_flags: \"%s\"\n", n, input_flags);
                      if (n == 1)
                      {
                         //Check if '=' was found
@@ -229,6 +236,29 @@ char* get_opt_long(int argc, char* argv[])
                               exit(getopterr);
                            }
                         }
+                        else
+                        {
+                           char *c = strstr(input_flags, "--");
+                           if (c != NULL && c - input_flags != 0)
+                           {
+                              get_opt_error(MISSING_TOKEN);
+                              get_opt_free();
+                              exit(getopterr);
+                           }
+                           c = strstr(input_flags, " -");
+                           if (c != NULL && c - input_flags != 0)
+                           {
+                              get_opt_error(WRONG_FORMAT);
+                              get_opt_free();
+                              exit(getopterr);
+                           }
+                           else
+                           {
+                              get_opt_error(MISSING_TOKEN);
+                              get_opt_free();
+                              exit(getopterr);
+                           }
+                        }
                      }
                      tmp_args = (char*) malloc( (sizeof *tmp_args) * 500);
                      for (j=0; j<strlen(input_flags)-1; ++j)
@@ -265,40 +295,31 @@ char* get_opt_long(int argc, char* argv[])
             }
             else //no '--' substr found in input_flags
             {
-               //at least one hyphen found at the start of a flag: wrong format
-               if (strstr(input_flags, "--") == NULL)
+               //End of input flags: OK
+               if (strlen(input_flags) == 0)
+               {
+                  printf("(end of flags)\n");
+                  return NULL;
+               }
+               
+               //Two cases: Wrong format on a flag OR no flags at all
+               if (input_flags[0] == '-')
                {
                   get_opt_error(WRONG_FORMAT);
                   get_opt_free();
                   exit(getopterr);
                }
-               //check for format mismatch
-               if (selected_format == LONG)
+               else
                {
-                  if (strlen(input_flags) == 1)
+                  //something was found, and current_long_flag does not accept
+                  //parameters -> wrong
+                  if (get_opt_valid_long_flag(current_long_flag) == 0)
                   {
-                     get_opt_error(WRONG_FORMAT);
-                     get_opt_free();
-                     exit(getopterr);
-                  }
-                  if (current_long_flag == NULL)
-                  {
-                     get_opt_error(INVALID_FLAG);
+                     get_opt_error(NO_ARG_ACCEPTED);
                      get_opt_free();
                      exit(getopterr);
                   }
                }
-               //if last current_flag does not accept any params
-               // and params were found -> error
-               if ((n = get_opt_valid_long_flag(current_long_flag)) == 0 &&
-                   strlen(input_flags) > 0)
-               {
-                  get_opt_error(NO_PARAMS);
-                  get_opt_free();
-                  exit(getopterr);
-               }
-               //Otherwise -> end of input flags: OK
-               return NULL;
             }
          }
       }
@@ -779,6 +800,14 @@ void get_opt_2_list(char* buffer)
    unsigned i, init_len = strlen(buffer);
    if (init_len > 0)
    {
+      //if space at the beginning: trim
+      if (buffer[0] == ' ')
+      {
+         memmove(buffer, buffer + 1, strlen(buffer) -1 );
+         buffer[strlen(buffer) - 1] = '\0';
+      }
+      --init_len;
+      //trim all subsequent
       for (i=init_len-1; ; --i)
       {
          if (buffer[i] == ' ') buffer[i] = 0;
@@ -788,6 +817,7 @@ void get_opt_2_list(char* buffer)
 #ifdef GET_OPT_DEBUG_
       printf("Buffer to transform: \"%s\"\n", buffer);
 #endif
+      char *buffer_init = buffer;
       //Count the number of items the list will contain
       for (no_entries=0; buffer[no_entries];
            buffer[no_entries] == ' ' ?
@@ -797,8 +827,8 @@ void get_opt_2_list(char* buffer)
 #ifdef GET_OPT_DEBUG_
       printf("No. items: %d\n", no_entries);
 #endif
-      buffer -= (init_len-no_entries+1);
-   
+      //get to the original position
+      buffer = buffer_init;
       //initiate the string list with the number of parsed arguments
       getoptarg = (char**) malloc ((no_entries + 1) * sizeof(char*));
    
@@ -849,16 +879,18 @@ void get_opt_error(ERROR code)
               "ERROR: flag \"%s\" requires an argument"
               , current_long_flag);
       fprintf(stderr,
-              " in the format --flag=arg1 arg2 ... argN");
+              " in the format --%s=arg1 arg2 ... argN\n",
+              current_long_flag);
       fprintf(stderr,
-              " (no spaces allowed)\n(code: SPACE_FOUND)\n");
+              "(no spaces allowed)\n(code: SPACE_FOUND)\n");
       break;
    case MISSING_TOKEN:
       fprintf(stderr,
               "ERROR: flag \"%s\" requires an argument"
               , current_long_flag);
       fprintf(stderr,
-              " in the format --flag=arg1 arg2 ... argN\n");
+              " in the format --%s=arg1 arg2 ... argN\n",
+              current_long_flag);
       fprintf(stderr,
               "(code: MISSING_TOKEN)\n");
       break;
@@ -867,7 +899,8 @@ void get_opt_error(ERROR code)
               "ERROR: flag \"%s\" requires at least an argument"
               , current_long_flag);
       fprintf(stderr,
-              " in the format --flag=arg1 arg2 ... argN\n");
+              " in the format --%s=arg1 arg2 ... argN\n",
+              current_long_flag);
       fprintf(stderr,
               "(code: MISSING_ARG)\n");
       break;
@@ -882,6 +915,13 @@ void get_opt_error(ERROR code)
               current_long_flag);
       fprintf(stderr,
               "(code: ARG_REQUIRED)\n");
+      break;
+   case NO_ARG_ACCEPTED:
+      fprintf(stderr,
+              "ERROR: flag \"%s\" does not accept any arguments\n",
+              current_long_flag);
+      fprintf(stderr,
+              "(code: NO_ARG_ACCEPTED)\n");
       break;
    case WRONG_FORMAT:
       fprintf(stderr,
