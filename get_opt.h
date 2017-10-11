@@ -392,6 +392,7 @@ int get_opt(int argc, char* argv[])
             get_opt_free();
             exit(getopterr);
          }
+         printf("Current input flags: \"%s\"\n", input_flags);
          //And start the processing
          for (l=current_index; l<strlen(input_flags); ++l)
          {
@@ -439,17 +440,25 @@ int get_opt(int argc, char* argv[])
                             current_index);
 #endif
                      tmp_args = (char*)malloc(sizeof(char) * 500);
+                     
+                     if (current_index == strlen(input_flags) - 1)
+                     {
+                        get_opt_error(SHORT_ARG_REQUIRED);
+                        get_opt_free();
+                        exit(getopterr);
+                     }
                      //see where to start
                      if (input_flags[current_index+1] == ' ') offset=1;
                      for (i=current_index + 1 + offset;
-                          i < (strlen(input_flags));
+                          i < strlen(input_flags);
                           ++i)
                      {
                         if (input_flags[i] == '-')
                            break;
                         tmp_args[i-current_index-offset-1] = input_flags[i];
+                        printf("i:%d\n", i);
                      }
-                     tmp_args[i-l] = '\0';
+                     tmp_args[i-current_index-offset-1] = '\0';
                      //Now since the flag expects at least one arg, check if one
                      //was provided
                      if (!strlen(tmp_args))
@@ -483,7 +492,7 @@ int get_opt(int argc, char* argv[])
                            break;
                         tmp_args[i-current_index-offset-1] = input_flags[i];
                      }
-                     tmp_args[i-l] = '\0';
+                     tmp_args[i-current_index-offset-1] = '\0';
                      get_opt_2_list(tmp_args);
                      //update index
                      current_index = l + offset + strlen(tmp_args) + 1;
@@ -805,8 +814,8 @@ void get_opt_2_list(char* buffer)
       {
          memmove(buffer, buffer + 1, strlen(buffer) -1 );
          buffer[strlen(buffer) - 1] = '\0';
+         --init_len;
       }
-      --init_len;
       //trim all subsequent
       for (i=init_len-1; ; --i)
       {

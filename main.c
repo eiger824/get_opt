@@ -14,66 +14,13 @@ void help()
 
 int main(int argc, char* argv[])
 {
-	int c;
         int a=0,b=0,c1=0,d=0,e=0,h=0;
         char** arg_list = NULL;
         char** arg_list_2 = NULL;
         
-        //get_opt_set_flags("abcde", NULL, "00*0+"); //OK
-        //get_opt_set_flags(NULL, NULL, "00*0+"); //wrong
-        //get_opt_set_flags("abcde", NULL, NULL); //wrong
         get_opt_set_flags(NULL, "all;block;create;delete;enable;help", "00*0+0"); //OK
-        //get_opt_set_flags("abcde", "all;block;clear;delete;enable", "00*0+"); //OK
-	/* while ((c = get_opt(argc, argv)) != -1) */
-	/* { */
-        /*    switch(c) */
-        /*    { */
-        /*    case 'a': */
-        /*       a=1; */
-        /*       break; */
-        /*    case 'b': */
-        /*       b=1; */
-        /*       break; */
-        /*    case 'c': */
-        /*       c1=1; */
-        /*       arg_list = getoptarg; */
-        /*       if (arg_list != NULL) */
-        /*       { */
-        /*          unsigned i; */
-              
-        /*          for (i=0; arg_list[i]; ++i) */
-        /*          { */
-        /*             printf("Parsed arg nr.%d: ", i); */
-        /*             printf("\"%s\"\n", arg_list[i]); */
-        /*          } */
-        /*       } */
-        /*       break; */
-        /*    case 'd': */
-        /*       d=1; */
-        /*       break; */
-        /*    case 'e': */
-        /*       e=1; */
-        /*       arg_list_2 = getoptarg; */
-        /*       if (arg_list_2 != NULL) */
-        /*       { */
-        /*          unsigned i; */
-              
-        /*          for (i=0; arg_list_2[i]; ++i) */
-        /*          { */
-        /*             printf("Parsed arg nr.%d: ", i); */
-        /*             printf("\"%s\"\n", arg_list_2[i]); */
-        /*          } */
-        /*       } */
-        /*       break; */
-        /*    } */
-	/* } */
 
-
-
-
-
-        char *p;
-
+	char *p;
         while ((p = get_opt_long(argc, argv)) != NULL)
         {
            if (!strcmp(p, "all"))
